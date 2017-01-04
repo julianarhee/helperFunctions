@@ -1,4 +1,4 @@
-function varargout = tiffRead(fPath, castType, isSilent)
+function varargout = tiffRead(fPath, castType, isSilent, obj)
 % [img, metadata] = tiffRead(fPath, castType, isSilent)
 
 %turn off warning thrown by reading in scanImage3 files
@@ -70,6 +70,8 @@ if nargout > 1
             scanImageVersion = 3;
         elseif ~isempty(strfind(imgDesc, 'dcOverVoltage'))
             scanImageVersion = 2016;
+        elseif ~isempty(strfind(imgDesc, 'ImageJ'))
+            scanImageVersion = -2; % do this temporarily bec made concatenated blocks 08/27/2016
         else
             scanImageVersion = -1;
         end
@@ -94,6 +96,8 @@ if nargout > 1
         case 2016
             siHeader = scanimage.util.opentif(fPath);
             varargout{2} = siHeader;
+        case -2 
+            varargout{2} = obj.metaDataSI; % added this 08/27/2016 to allow imageJ combo stack for motioncorrection
         case -1
             % Not a scanimage file. Since a second output argument was
             % requested, we use a fake scanimage metadata to make the Acq2P
