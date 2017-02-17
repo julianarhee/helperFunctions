@@ -24,39 +24,67 @@ if exist(fPath, 'file') ~= 2
 end
 
 % Create Tiff object:
-t = Tiff(fPath);
+% jyr use orig tiff headers--            
+%pts = strsplit(fPath, '_scaledfiji');
+%fPath_meta = strcat(pts(1), pts(2));
+%t = Tiff(fPath_meta{1});
+%t = Tiff(fPath);
+t = imfinfo(fPath);
 
 % Get number of directories (= frames):
-t.setDirectory(1);
-while ~t.lastDirectory
-    t.nextDirectory;
-end
-nDirectories = t.currentDirectory;
+% t.setDirectory(1);
+% while ~t.lastDirectory
+%     t.nextDirectory;
+% end
+% nDirectories = t.currentDirectory;
+nDirectories = length(t);
 
 % Load all directories (= frames):
-img = zeros(t.getTag('ImageLength'), ...
-    t.getTag('ImageWidth'), ...
+% img = zeros(t.getTag('ImageLength')*2, ...
+%     t.getTag('ImageWidth'), ...
+%     nDirectories, ...
+%     castType);
+img = zeros(t(1).Height, ...
+    t(1).Width, ...
     nDirectories, ...
     castType);
 
+% for i = 1:nDirectories
+%     t.setDirectory(i);
+%     img(:,:,i) = t.read;
+%     
+%     if ~isSilent && ~mod(i, 200)
+%         fprintf('%1.0f frames of %d loaded.\n', i, nDirectories);
+%     end
+% end
+fid = tifflib('open', fPath, 'r');
+rps = tifflib('getField', fid, Tiff.TagID.RowsPerStrip);
+
+% for i = 1:nDirectories
+%     t.setDirectory(i);
+%     img(:,:,i) = t.read;
+%     
+%     if ~isSilent && ~mod(i, 200)
+%         fprintf('%1.0f frames of %d loaded.\n', i, nDirectories);
+%     end
+% end
 for i = 1:nDirectories
-    t.setDirectory(i);
-    img(:,:,i) = t.read;
+    tifflib('setDirectory',fid,i);
+   % Go through each strip of data.
+   rps = min(rps,t(1).Height);
+   for r = 1:rps:t(1).Height)
+      row_inds = r:min(t(1).Height),r+rps-1);
+      stripNum = tifflib('computeStrip',fid,r);
+      img(row_inds,:,i) = tifflib('readEncodedStrip',fid,stripNum);
+   end
     
     if ~isSilent && ~mod(i, 200)
         fprintf('%1.0f frames of %d loaded.\n', i, nDirectories);
     end
 end
+tifflib('close', fid);
 
-%varargout{1} = img;
-%varargout{1} = img;
-% rescale if needed?
-scale_vec = [2 1 1];
-T = maketform('affine',[scale_vec(1) 0 0; 0 scale_vec(2) 0; 0 0 scale_vec(3); 0 0 0;]);
-R = makeresampler({'cubic','cubic','cubic'},'fill');
-ImageScaled = tformarray(img,T,R,[1 2 3],[1 2 3], size(img).*scale_vec,[],0);
-
-varargout{1} = ImageScaled;
+varargout{1} = img;
 
 %turn back on warning to avoid conflicts later
 warning('on','MATLAB:imagesci:tiffmexutils:libtiffWarning'),
@@ -77,7 +105,7 @@ if nargout > 1
             scanImageVersion = 4;
         elseif ~isempty(strfind(imgDesc, 'state.'))
             scanImageVersion = 3;
-        elseif ~isempty(strfind(imgDesc, 'dcOverVoltage'))
+        elseif ~isempty(strfind(imgDesc, 'dcOverVoltage')) || ~isempty(strfind(imgDesc, 'ImageJ'))
             scanImageVersion = 2016;
         else
             scanImageVersion = -1;
@@ -102,6 +130,9 @@ if nargout > 1
             varargout{2} = s.scanimage;
         case 2016
             siHeader = scanimage.util.opentif(fPath);
+%             pts = strsplit(fPath, '_scaledfiji');
+%             fPath_meta = strcat(pts(1), pts(2));
+%             siHeader = scanimage.util.opentif(fPath_meta{1});
             varargout{2} = siHeader;
         case -1
             % Not a scanimage file. Since a second output argument was

@@ -1,4 +1,4 @@
-function varargout = tiffRead(fPath, castType, isSilent)
+function varargout = tiffRead2(fPath, castType, isSilent)
 % [img, metadata] = tiffRead(fPath, castType, isSilent)
 
 %turn off warning thrown by reading in scanImage3 files
@@ -34,29 +34,34 @@ end
 nDirectories = t.currentDirectory;
 
 % Load all directories (= frames):
-img = zeros(t.getTag('ImageLength'), ...
+img = zeros(t.getTag('ImageLength')*2, ...
     t.getTag('ImageWidth'), ...
     nDirectories, ...
     castType);
 
 for i = 1:nDirectories
     t.setDirectory(i);
-    img(:,:,i) = t.read;
+    tmp_img = t.read;
+    
+    scale_vec = [2 1];
+    T = maketform('affine',[scale_vec(1) 0; 0 scale_vec(2); 0 0;]);
+    R = makeresampler({'cubic','cubic'},'fill');
+    img(:,:,i) = tformarray(tmp_img,T,R,[1 2],[1 2], size(tmp_img).*scale_vec,[],0);
     
     if ~isSilent && ~mod(i, 200)
         fprintf('%1.0f frames of %d loaded.\n', i, nDirectories);
     end
 end
 
-%varargout{1} = img;
+varargout{1} = img;
 %varargout{1} = img;
 % rescale if needed?
-scale_vec = [2 1 1];
-T = maketform('affine',[scale_vec(1) 0 0; 0 scale_vec(2) 0; 0 0 scale_vec(3); 0 0 0;]);
-R = makeresampler({'cubic','cubic','cubic'},'fill');
-ImageScaled = tformarray(img,T,R,[1 2 3],[1 2 3], size(img).*scale_vec,[],0);
+% scale_vec = [2 1 1];
+% T = maketform('affine',[scale_vec(1) 0 0; 0 scale_vec(2) 0; 0 0 scale_vec(3); 0 0 0;]);
+% R = makeresampler({'cubic','cubic','cubic'},'fill');
+% ImageScaled = tformarray(img,T,R,[1 2 3],[1 2 3], size(img).*scale_vec,[],0);
 
-varargout{1} = ImageScaled;
+%varargout{1} = ImageScaled;
 
 %turn back on warning to avoid conflicts later
 warning('on','MATLAB:imagesci:tiffmexutils:libtiffWarning'),
