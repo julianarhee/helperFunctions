@@ -51,12 +51,12 @@ end
 %varargout{1} = img;
 %varargout{1} = img;
 % rescale if needed?
-scale_vec = [2 1 1];
-T = maketform('affine',[scale_vec(1) 0 0; 0 scale_vec(2) 0; 0 0 scale_vec(3); 0 0 0;]);
-R = makeresampler({'cubic','cubic','cubic'},'fill');
-ImageScaled = tformarray(img,T,R,[1 2 3],[1 2 3], size(img).*scale_vec,[],0);
+% scale_vec = [2 1 1];
+% T = maketform('affine',[scale_vec(1) 0 0; 0 scale_vec(2) 0; 0 0 scale_vec(3); 0 0 0;]);
+% R = makeresampler({'cubic','cubic','cubic'},'fill');
+% ImageScaled = tformarray(img,T,R,[1 2 3],[1 2 3], size(img).*scale_vec,[],0);
 
-varargout{1} = ImageScaled;
+varargout{1} = img;
 
 %turn back on warning to avoid conflicts later
 warning('on','MATLAB:imagesci:tiffmexutils:libtiffWarning'),
